@@ -1,0 +1,147 @@
+---
+title: "esm206-notes-lab1"
+author: "Danny Feinberg"
+date: "10/18/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+####------- Attach packages -------####
+library(tidyverse)
+library(janitor)
+library(here)
+```
+
+## Objects Exercize at the beginning of class
+
+```{r}
+###############################################################
+######    Objects exercise at the beginning of class    #######
+###############################################################
+
+# original prices
+taco <- 6
+price <- 3
+
+# calculate meal price
+price_meal <- taco * price
+
+# change number of tacos to n=8
+taco <- 8
+
+# recalculate price_meal
+price_meal <- taco * price
+
+### making a vector (everything to the right of the arrow will be stored as "taco_week")    ###
+### c() is a function that exists in base R; within parenthesis we pass the function values ###
+### (in this case, the number of daily tacos for the last 7 days)                           ###
+
+# vector describing number of tacos per day
+taco_week <- c(2, 5, 10, 1, 4, 8, 2)
+
+# functions we can compute based on vector above
+mean(taco_week)
+
+max(taco_week)
+
+# store mean daily tacos as an object "mean_daily_tacos"
+mean_daily_tacos <- mean(taco_week)
+```
+
+## Important Note!
+
+**Do not put "install.packages()" code in an Rmarkdown doc because it will run every time you press the 'knit' button**
+
+## Keyboard shortcuts
+
+### To insert code chunk
+- <mark>On a mac: "⌘" + "⌥" + "i"</mark> 
+- On a PC: "ctrl" + "alt" + "i" 
+- On either: click the green '+C' button above and choose 'R'
+
+### To insert "<-" 
+- <mark>On a mac: "⌥" + "-"</mark> 
+
+### To insert pipe operator
+- <mark>On a mac: ⌃⇧m ("ctrl" + "shift" + "m")</mark> 
+
+## Use read_csv() - **DO NOT use read.csv**
+
+```{r}
+verts <- read_csv(here("data", "mack_creek_verts.csv"))
+```
+
+## Exploring the data
+
+In the console, I can use the head() function to look at the first 6 lines - tail() does the last 6 lines - names() shows us the names
+
+## Clean up the column names with janitor::clean_names()
+
+-   <mark>control shift M</mark> is the shortcut for the **pipe operator "%\>%"**
+
+    -   the pipe operator allows us to write code the way that our brains think about it (logically ordered rather than nested processes; "start with this *and then* do this thing)
+
+-   clean_names() converts column names to lower snake case
+
+```{r}
+verts_clean <- verts %>% clean_names()
+## Line above could have been written as follows: 
+### clean_names(vert)
+```
+
+## Basic Data Wrangling using the dplyr package (exists within the tidyverse(a collection of packages))
+
+-   <mark>use dplyr::select() to select/exclude columns; use dplyr::filter() to select/exclude rows</mark>
+
+```{r}
+verts_subset <- verts_clean %>% 
+  select(species, length1, weight)
+```
+
+## Let's make our first gg plot
+
+```{r}
+ggplot(data = verts_subset, aes(x = length1, y = weight)) +
+  geom_point()
+
+# if you are referring to a column in ggplot, use aes (to map aes onto variable)
+# the "+" sign adds a layer in ggplot
+# geom_* give us many ways to plot
+```
+
+### Let's refine our plot with colors (add an aesthetic (aes(color = variable that should be identified with colors)))
+
+```{r}
+
+ggplot(data = verts_subset, aes(x = length1, y = weight)) +
+  geom_point(aes(color = species))
+
+```
+
+## Let's make a subset of this data that only used information from the cutthroat species (ONCL in dataframe) of fish (filtering by ONCL species)
+
+### Use dplyr::filter() to create subsets keeping rows based on whether they match our conditions or not.
+
+```{r}
+trout <- verts_clean %>% 
+  filter(species == "ONCL")   #double equals sign means "must match"
+```
+
+### Piping multiple steps together
+
+```{r}
+verts_piped <- verts_clean %>% 
+  clean_names() %>% 
+  select(species, length1, weight) %>% 
+  filter(species == "DITE")
+  
+```
+
+```{r}
+ggplot(data = verts_piped, aes(x = length1, y = weight)) +
+  geom_point(aes(color = weight))
+```
+

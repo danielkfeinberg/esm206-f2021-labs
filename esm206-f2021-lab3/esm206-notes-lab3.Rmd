@@ -1,0 +1,261 @@
+---
+title: "esm206-notes-lab3"
+author: "Danny Feinberg"
+date: "10/18/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(janitor)
+library(here)
+library(gapminder)
+library(palmerpenguins)
+```
+
+### Part 0: Setup
+
+- Create a new R project (does not need to be version-controlled)
+- Add two subfolders: data and src
+- Download two data files from GauchoSpace: jornada_lizards.csv and lizard_abb.csv, and copy them into your project data folder
+- Open a new R Markdown document in your project, delete all below the setup chunk
+- Attach the necessary packages in the setup chunk (tidyverse, janitor, here, gapminder). Note, you probably need to install the `gapminder` package by running `install.packages("gapminder")` in the Console
+
+### Part 1: Tidying data continued
+
+In this section, we'll learn how to combine two data frames with `full_join()`, and to reshape with `pivot_longer()` and `pivot_wider()` to get data into tidy format.
+
+A. Join lizard common names with lizard data
+
+The following data are from Jornada Basin LTER: 
+
+- Title: Lizard pitfall trap data (LTER-II, LTER-III)
+- URL: https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-jrn.210007001.36
+- Citation: Lightfoot, D. 2017. Lizard pitfall trap data (LTER-II, LTER-III) ver 36. Environmental Data Initiative. https://doi.org/10.6073/pasta/ff37b4cace16a9943575f3fd7067064e (Accessed 2020-07-05).
+- Lizard code list from: https://jornada.nmsu.edu/content/lizard-code-list
+
+Read in both lizards datasets: 
+
+- jornada_lizards.csv (pitfall trap data), which contains:
+     - common name
+     - site (site name)
+     - sex (M = male, F = female, J = juvenile)
+     - tail (B = broken, W = whole)
+- lizard_abb.csv (lizard abbreviations & common names)
+
+
+```{r}
+# Read in lizards data
+# Note: your path will differ depending on uyour project setup
+lizard_names <- read_csv(here("data","lizard_abb.csv"))
+
+lizard_traps <- read_csv(here("data","jornada_lizards.csv"))
+```
+
+Join together by the `common_name` variable with `full_join()`. See more information on `full_join()` - there are other options for more discriminating / excluding joins, but if you're not sure how they work **FULL JOIN** and deal with filtering later! 
+
+```{r}
+lizard_join <- lizard_traps %>% 
+  full_join(lizard_names)
+```
+
+Notice that it will first look for matching names, and join by those. But we don't *have* to have matching names. For example, let's make a version of lizard_traps that has common_name renamed as "lizard_name":
+
+```{r}
+lizard_traps_rn <- lizard_traps %>% 
+  rename(lizard_name = common_name)
+```
+
+We can then specify which column to join by: 
+
+```{r}
+lizard_join_2 <- lizard_traps_rn %>% 
+  full_join(lizard_names, by = c("lizard_name" = "common_name"))
+```
+
+Refresh our memory on finding counts: 
+
+```{r}
+tail_counts <- lizard_join %>% 
+  filter(common_name %in% c("Western Whiptail","Eastern Fence")) %>% 
+  count(common_name, tail)
+
+tail_counts
+```
+
+# Lab 3 Notes
+
+## Exercise 1
+```{r}
+# find counts of lizards by sex and tail condition 
+lizards_counts_1 <-  lizard_join %>% 
+  group_by(sex, tail) %>% 
+  summarize(sample_size = n())
+  
+lizards_counts_1 #show me the dataframe when knitting; don't just store it
+```
+
+### Using this same strategy find the number of lizards observed by SITE and COMMON NAME within this data fram (lizard_join)
+```{r}
+lizards_colunts_2 <- lizard_join %>% 
+  group_by(site, common_name) %>% 
+  summarize(count = n())
+
+lizards_colunts_2
+```
+
+## Native pipe operator to R: `|>`
+- most R functions should play nice with this standard pipe operator (i.e., you won't need to load in the tidyverse for it to work)
+
+## Palmer Penguins example  
+```{r}
+penguins_n <- penguins %>% 
+  group_by(species) %>% 
+  mutate(sample_size = n()) %>% # tacks on a new column to each row indicating overall # sample size
+  mutate(mean_flipper_length = mean(flipper_length_mm, na.rm = TRUE))
+view(penguins)
+```
+
+## if you just want to find counts of lizard_join by common_name and tail
+```{r}
+lizard_count_3 <- lizard_join %>% 
+  count(common_name, tail)
+
+lizard_count_3
+```
+
+
+## recreate table above with group_by and summarize
+```{r}
+lizard_count_3_again <- lizard_join %>% 
+  group_by(common_name, tail) %>% 
+  summarize(n = n())
+
+lizard_count_3_again
+```
+```{r}
+mtcars
+
+mtcars_summary <- mtcars %>% 
+  group_by(cyl) %>% 
+  summarize(mean_mpg = mean(mpg),
+            sd_mpg = sd(mpg),
+            sample_size = n())
+
+mtcars_summary
+```
+
+  ## Putting together things that we've learned
+  ### Starting from lizard_join, I want you to: 
+    - create a subset only containing site, common_name, and tail status
+    - Only including observations for "Western Whiptail", "Texas Horned", and "Little Striped"
+    - for each remaining species, create a summary table that contains the counts of observations BY SPECIES (can do it however you want)
+    
+    #### My Attempt:
+```{r}
+my_attempt_lizard_join <- lizard_join %>% 
+  select(site, common_name, tail) %>% 
+  filter(common_name %in% c("Western Whiptail", "Texas Horned", "Little Striped")) %>% 
+  count(common_name)
+
+# Use uniuqe() to check all existing levels of a variable
+#unique(my_attempt_lizard_join$common_name)
+```
+  
+OR 
+
+```{r}
+my_attempt_lizard_join <- lizard_join %>% 
+  select(site, common_name, tail) %>% 
+  filter(common_name %in% c("Western Whiptail", "Texas Horned", "Little Striped")) %>% 
+  group_by(common_name) %>% 
+  summarize(total_count = n())
+
+my_attempt_lizard_join
+```
+ ---
+## How to reshape data to longer or wider formats
+Sometimes we need to reshape data to get it into Tidy (TM) format. 
+
+Tidy data: 
+1. Each variable is in its own column 
+2. Each observation is in its own row
+3. Each value occupies a single cell 
+
+(we are using the gapminder dataset for this exercise)
+
+First make a subset with only observations from the US, Canada, and Mexico
+```{r}
+n_am <- gapminder %>%
+  filter(country %in% c("United States", "Canada", "Mexico")) %>% 
+  select(country, year, pop)
+```
+
+### New task: create a ggplot line graph, separated by country (from `n_am` subset) of population over time
+```{r}
+ggplot(data = n_am, aes(x = year, y = pop)) +
+  geom_line(aes(color = country))
+```
+
+
+# to get information on a package: put a `?` in front of the package name
+  - example: `?gapminder`
+  
+
+### Make a wide version of the gapminder data, where the year vairiable gets spread out across multiple columns
+
+
+```{r}
+n_am_wider <- n_am %>% 
+  pivot_wider(names_from = year,
+              values_from = pop) 
+
+view(n_am_wider)
+
+#pivot_wider is a function from tidyR package (part of tidyverse) 
+```
+
+#### To get it back to tidy format we want to collapse the year columns, then give the column the name "year", then put the values back in the correct columns
+
+Now back to tidy format using `pivot_longer()`.
+
+```{r}
+n_am_longer <- n_am_wider %>% 
+  pivot_longer(
+    cols = '1952':'2007',
+    names_to = 'year',
+    values_to = 'pop'
+  ) %>% 
+ 
+
+#but `year` might show up as a character, rather than number as the variable type since it was a column name before.
+
+mutate(year = as.numeric(year)) #converts existing year column (character) to numeric
+
+class(n_am_longer$year) #checking class of new, converted year variable
+```
+
+## Make our first function
+<mark>Shortcut: Cmd + Option + X</mark>
+
+distance = rate * time 
+
+```{r}
+calc_distance <- function(rate, time) {
+  rate * time
+} 
+
+calc_distance(rate = 1000, time = 42)
+
+```
+
+### new function 
+```{r}
+model_bananas <- function(A, B, C, bananas) {
+  A + B - C / bananas
+}
+
+model_bananas(A = 1000, B = 2, C = 50, bananas = 0.0001)
+```
